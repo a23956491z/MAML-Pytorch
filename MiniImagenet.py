@@ -20,6 +20,17 @@ class MiniImagenet(Dataset):
     NOTICE: meta-learning is different from general supervised learning, especially the concept of batch and set.
     batch: contains several sets
     sets: conains n_way * k_shot for meta-train set, n_way * n_query for meta-test set.
+
+    how to download dataset:
+        * step 0 : download data (choose one)
+            * https://drive.google.com/open?id=1HkgrkAwukzEZA0TpO7010PkAOREb2Nuk
+            * https://www.dropbox.com/s/ed1s1dgei9kxd2p/mini-imagenet.zip?dl=0
+        * step 1 : extract the data
+            `unzip mini-imagenet.zip miniimagenet`
+            (there would be a "images" folder in miniimagenet after extracted)
+        * step 2 : download label
+            * https://github.com/twitter/meta-learning-lstm/tree/master/data/miniImagenet
+        * step 3 : put label data inside miniimagenet folder
     """
 
     def __init__(self, root, mode, batchsz, n_way, k_shot, k_query, resize, startidx=0):
