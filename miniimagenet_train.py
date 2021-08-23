@@ -17,8 +17,11 @@ def mean_confidence_interval(accs, confidence=0.95):
     return m, h
 
 
-def main():
+def main(args):
 
+    # Manually assign the seed to prevent get different result
+    # in retries.
+    #
     torch.manual_seed(222)
     torch.cuda.manual_seed_all(222)
     np.random.seed(222)
@@ -49,6 +52,7 @@ def main():
     device = torch.device('cuda')
     maml = Meta(args, config).to(device)
 
+    # tmp is a list which contains all the requires_grad params.
     tmp = filter(lambda x: x.requires_grad, maml.parameters())
     num = sum(map(lambda x: np.prod(x.shape), tmp))
     print(maml)
@@ -106,6 +110,6 @@ if __name__ == '__main__':
     argparser.add_argument('--update_step', type=int, help='task-level inner update steps', default=5)
     argparser.add_argument('--update_step_test', type=int, help='update steps for finetunning', default=10)
 
-    args = argparser.parse_args()
+    input_args = argparser.parse_args()
 
-    main()
+    main(input_args)
