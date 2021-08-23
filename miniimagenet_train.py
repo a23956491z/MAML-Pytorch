@@ -7,6 +7,8 @@ from    torch.optim import lr_scheduler
 import  random, sys, pickle
 import  argparse
 
+import pdb
+from utils.print import highlight
 from meta import Meta
 
 
@@ -26,7 +28,9 @@ def main(args):
     torch.cuda.manual_seed_all(222)
     np.random.seed(222)
 
+    print(highlight('Input arguments:'))
     print(args)
+    print()
 
     config = [
         ('conv2d', [32, 3, 3, 3, 1, 0]),
@@ -52,11 +56,18 @@ def main(args):
     device = torch.device('cuda')
     maml = Meta(args, config).to(device)
 
-    # tmp is a list which contains all the requires_grad params.
+    # filter would take out the elements which make first function true.
+    # So tmp is a list which contains all the requires_grad params.
     tmp = filter(lambda x: x.requires_grad, maml.parameters())
+
+    # np.prod return the product of array
+    # np.prod(x.shape) : how many tensors 1 element have
     num = sum(map(lambda x: np.prod(x.shape), tmp))
+    print(highlight('MAML parameters:'))
     print(maml)
-    print('Total trainable tensors:', num)
+    pdb.set_trace()
+
+    print(highlight('Total trainable tensors:'), num)
 
     # batchsz here means total episode number
     mini = MiniImagenet('/home/i/tmp/MAML-Pytorch/miniimagenet/', mode='train', n_way=args.n_way, k_shot=args.k_spt,
