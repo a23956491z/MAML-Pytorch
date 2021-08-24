@@ -65,18 +65,28 @@ def main(args):
     num = sum(map(lambda x: np.prod(x.shape), tmp))
     print(highlight('MAML parameters:'))
     print(maml)
-    pdb.set_trace()
 
     print(highlight('Total trainable tensors:'), num)
 
+
     # batchsz here means total episode number
-    mini = MiniImagenet('/home/i/tmp/MAML-Pytorch/miniimagenet/', mode='train', n_way=args.n_way, k_shot=args.k_spt,
+    # classes allocates -> {train, test, val} = {64, 20 ,16}
+    mini = MiniImagenet('/home/divclab/Desktop/Enip/data/miniimagenet/',
+                        mode='train',
+                        n_way=args.n_way,
+                        k_shot=args.k_spt,
                         k_query=args.k_qry,
                         batchsz=10000, resize=args.imgsz)
-    mini_test = MiniImagenet('/home/i/tmp/MAML-Pytorch/miniimagenet/', mode='test', n_way=args.n_way, k_shot=args.k_spt,
-                             k_query=args.k_qry,
-                             batchsz=100, resize=args.imgsz)
+    mini_test = MiniImagenet('/home/divclab/Desktop/Enip/data/miniimagenet/',
+                        mode='test',
+                        n_way=args.n_way,
+                        k_shot=args.k_spt,
+                        k_query=args.k_qry,
+                        batchsz=100, resize=args.imgsz)
 
+    pdb.set_trace()
+    # "//" means integer divide
+    # args.epoch defaults 60000
     for epoch in range(args.epoch//10000):
         # fetch meta_batchsz num of episode each time
         db = DataLoader(mini, args.task_num, shuffle=True, num_workers=1, pin_memory=True)

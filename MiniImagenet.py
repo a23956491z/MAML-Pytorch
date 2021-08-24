@@ -8,6 +8,8 @@ from PIL import Image
 import csv
 import random
 
+import pandas
+from utils.print import highlight
 
 class MiniImagenet(Dataset):
     """
@@ -49,7 +51,7 @@ class MiniImagenet(Dataset):
         self.batchsz = batchsz  # batch of set, not batch of imgs
         self.n_way = n_way  # n-way
         self.k_shot = k_shot  # k-shot
-        self.k_query = k_query  # for evaluation
+        self.k_query = k_query  # for evaluation (meta-test)
         self.setsz = self.n_way * self.k_shot  # num of samples per set
         self.querysz = self.n_way * self.k_query  # number of samples per set for evaluation
         self.resize = resize  # resize to
@@ -73,22 +75,43 @@ class MiniImagenet(Dataset):
                                                  ])
 
         self.path = os.path.join(root, 'images')  # image path
+
+        # csv file:
+        #   filename                , label
+        #   n01532829000000005.jpg  , n01532829
+        #   n01532829000000006.jpg  , n01532829
+        # csvdata is dictionary , key is label, value is all the filename
+        print(highlight('Load CSV file : ' + os.path.join(root, mode + '.csv'), 'green' ))
         csvdata = self.loadCSV(os.path.join(root, mode + '.csv'))  # csv path
+        print('\t',type(csvdata), len(csvdata.keys()), end='\n\n')
+
+        # all img names
         self.data = []
         self.img2label = {}
-        for i, (k, v) in enumerate(csvdata.items()):
-            self.data.append(v)  # [[img1, img2, ...], [img111, ...]]
-            self.img2label[k] = i + self.startidx  # {"img_name[:9]":label}
+
+        for i, (label, imgs) in enumerate(csvdata.items()):
+
+            self.data.append(imgs)  # [[img1, img2, ...], [img111, ...]]
+            self.img2label[label] = i + self.startidx  # {"img_name[:9]":label}
+
+        # total classes
         self.cls_num = len(self.data)
 
         self.create_batch(self.batchsz)
 
+        import pdb
+        pdb.set_trace()
     def loadCSV(self, csvf):
         """
         return a dict saving the information of csv
         :param splitFile: csv file name
         :return: {label:[file1, file2 ...]}
         """
+
+        # pandas is too nice!
+        # groupby('label')['filename'].apply(list) this would be dataFrame
+        dictLabels_v2 = pandas.read_csv(csvf).groupby('label')['filename'].apply(list).to_dict()
+
         dictLabels = {}
         with open(csvf) as csvfile:
             csvreader = csv.reader(csvfile, delimiter=',')
@@ -101,13 +124,14 @@ class MiniImagenet(Dataset):
                     dictLabels[label].append(filename)
                 else:
                     dictLabels[label] = [filename]
+
         return dictLabels
 
     def create_batch(self, batchsz):
         """
         create batch for meta-learning.
         ×episode× here means batch, and it means how many sets we want to retain.
-        :param episodes: batch size
+        :param batchsz: batch size
         :return:
         """
         self.support_x_batch = []  # support set batch
