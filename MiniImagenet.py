@@ -86,6 +86,10 @@ class MiniImagenet(Dataset):
         print('\t',type(csvdata), len(csvdata.keys()), end='\n\n')
 
         # all img names
+        # [
+        #   [ 'img1', 'img2' ...], # first class
+        #   [ 'img3', 'img4' ...], # second class
+        # ]
         self.data = []
         self.img2label = {}
 
@@ -99,8 +103,8 @@ class MiniImagenet(Dataset):
 
         self.create_batch(self.batchsz)
 
-        import pdb
-        pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
     def loadCSV(self, csvf):
         """
         return a dict saving the information of csv
@@ -110,6 +114,7 @@ class MiniImagenet(Dataset):
 
         # pandas is too nice!
         # groupby('label')['filename'].apply(list) this would be dataFrame
+
         dictLabels_v2 = pandas.read_csv(csvf).groupby('label')['filename'].apply(list).to_dict()
 
         dictLabels = {}
@@ -138,8 +143,10 @@ class MiniImagenet(Dataset):
         self.query_x_batch = []  # query set batch
         for b in range(batchsz):  # for each batch
             # 1.select n_way classes randomly
-            selected_cls = np.random.choice(self.cls_num, self.n_way, False)  # no duplicate
+            #   replace=False means no duplicate
+            selected_cls = np.random.choice(self.cls_num, self.n_way, replace=False)
             np.random.shuffle(selected_cls)
+
             support_x = []
             query_x = []
             for cls in selected_cls:
@@ -152,13 +159,29 @@ class MiniImagenet(Dataset):
                     np.array(self.data[cls])[indexDtrain].tolist())  # get all images filename for current Dtrain
                 query_x.append(np.array(self.data[cls])[indexDtest].tolist())
 
-            # shuffle the correponding relation between support set and query set
+                # shuffle the correponding relation between support set and query set
             random.shuffle(support_x)
             random.shuffle(query_x)
 
             self.support_x_batch.append(support_x)  # append set to current sets
             self.query_x_batch.append(query_x)  # append sets to current sets
 
+        # support_x_batch looks like
+        # [
+        #   [ first batch
+        #       [ 5 ways
+        #           ['img1'], 1 shot
+        #           ['img6'], 1 shot
+        #           ['img4'], 1 shot
+        #           ['img3'], 1 shot
+        #           ['img5'], 1 shot
+        #       ]
+        #   ],
+        #   [ second batch
+        #   ],...
+        # ]
+
+    # ---------------------------- reading end
     def __getitem__(self, index):
         """
         index means index of sets, 0<= index <= batchsz-1
@@ -225,20 +248,23 @@ if __name__ == '__main__':
     plt.ion()
 
     tb = SummaryWriter('runs', 'mini-imagenet')
-    mini = MiniImagenet('../mini-imagenet/', mode='train', n_way=5, k_shot=1, k_query=1, batchsz=1000, resize=168)
+    mini = MiniImagenet('../../data/miniimagenet/', mode='train', n_way=6, k_shot=1, k_query=2, batchsz=1000, resize=168)
 
     for i, set_ in enumerate(mini):
         # support_x: [k_shot*n_way, 3, 84, 84]
         support_x, support_y, query_x, query_y = set_
 
-        support_x = make_grid(support_x, nrow=2)
-        query_x = make_grid(query_x, nrow=2)
+        support_x = make_grid(support_x, nrow=3)
+        query_x = make_grid(query_x, nrow=4)
 
-        plt.figure(1)
-        plt.imshow(support_x.transpose(2, 0).numpy())
-        plt.pause(0.5)
-        plt.figure(2)
-        plt.imshow(query_x.transpose(2, 0).numpy())
+        fig, ax = plt.subplots(1,2)
+
+
+
+        ax[0].imshow(support_x.transpose(2, 0).numpy())
+
+        ax[1].imshow(query_x.transpose(2, 0).numpy())
+
         plt.pause(0.5)
 
         tb.add_image('support_x', support_x)
