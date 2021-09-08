@@ -181,24 +181,38 @@ class MiniImagenet(Dataset):
         #   ],...
         # ]
 
-    # ---------------------------- reading end
+
     def __getitem__(self, index):
         """
         index means index of sets, 0<= index <= batchsz-1
         :param index:
         :return:
         """
+        # self.setsz : num of samples per set
+        # self.resize : Resize to
+
         # [setsz, 3, resize, resize]
         support_x = torch.FloatTensor(self.setsz, 3, self.resize, self.resize)
+
         # [setsz]
         support_y = np.zeros((self.setsz), dtype=np.int)
+
         # [querysz, 3, resize, resize]
         query_x = torch.FloatTensor(self.querysz, 3, self.resize, self.resize)
+
         # [querysz]
         query_y = np.zeros((self.querysz), dtype=np.int)
 
+# len(self.support_x_batch[index]) == n_way
+# len(self.support_x_batch[index][0]) == k_shot
+# len(flatten_support_x) == n_way * k_shot
         flatten_support_x = [os.path.join(self.path, item)
                              for sublist in self.support_x_batch[index] for item in sublist]
+
+# print('flatten support x size',len(flatten_support_x))
+# print('support x batch item size',len(self.support_x_batch[index]))
+# print('support x item of item size ', len(self.support_x_batch[index][0]))
+
         support_y = np.array(
             [self.img2label[item[:9]]  # filename:n0153282900000005.jpg, the first 9 characters treated as label
              for sublist in self.support_x_batch[index] for item in sublist]).astype(np.int32)
@@ -208,12 +222,15 @@ class MiniImagenet(Dataset):
         query_y = np.array([self.img2label[item[:9]]
                             for sublist in self.query_x_batch[index] for item in sublist]).astype(np.int32)
 
-        # print('global:', support_y, query_y)
+# print('global:', support_y, query_y)
+
         # support_y: [setsz]
         # query_y: [querysz]
-        # unique: [n-way], sorted
-        unique = np.unique(support_y)
+        # unique(remove duplicated) size [n-way] : would return a sorted result
+        #   so we need shuffle again
+        unique = np.unique(support_y )
         random.shuffle(unique)
+
         # relative means the label ranges from 0 to n-way
         support_y_relative = np.zeros(self.setsz)
         query_y_relative = np.zeros(self.querysz)
@@ -221,15 +238,17 @@ class MiniImagenet(Dataset):
             support_y_relative[support_y == l] = idx
             query_y_relative[query_y == l] = idx
 
-        # print('relative:', support_y_relative, query_y_relative)
+# print('relative:', support_y_relative, query_y_relative)
 
+        # open image & transform here
         for i, path in enumerate(flatten_support_x):
             support_x[i] = self.transform(path)
 
         for i, path in enumerate(flatten_query_x):
             query_x[i] = self.transform(path)
-        # print(support_set_y)
-        # return support_x, torch.LongTensor(support_y), query_x, torch.LongTensor(query_y)
+
+# print(support_set_y)
+# return support_x, torch.LongTensor(support_y), query_x, torch.LongTensor(query_y)
 
         return support_x, torch.LongTensor(support_y_relative), query_x, torch.LongTensor(query_y_relative)
 
@@ -248,7 +267,7 @@ if __name__ == '__main__':
     plt.ion()
 
     tb = SummaryWriter('runs', 'mini-imagenet')
-    mini = MiniImagenet('../../data/miniimagenet/', mode='train', n_way=6, k_shot=1, k_query=2, batchsz=1000, resize=168)
+    mini = MiniImagenet('../../data/miniimagenet/', mode='train', n_way=6, k_shot=3, k_query=2, batchsz=1000, resize=168)
 
     for i, set_ in enumerate(mini):
         # support_x: [k_shot*n_way, 3, 84, 84]
