@@ -84,7 +84,7 @@ def main(args):
                         k_query=args.k_qry,
                         batchsz=100, resize=args.imgsz)
 
-    pdb.set_trace()
+    # pdb.set_trace()
     # "//" means integer divide
     # args.epoch defaults 60000
     for epoch in range(args.epoch//10000):
@@ -95,6 +95,7 @@ def main(args):
 
             x_spt, y_spt, x_qry, y_qry = x_spt.to(device), y_spt.to(device), x_qry.to(device), y_qry.to(device)
 
+            # MAML Forward
             accs = maml(x_spt, y_spt, x_qry, y_qry)
 
             if step % 30 == 0:
@@ -105,6 +106,9 @@ def main(args):
                 accs_all_test = []
 
                 for x_spt, y_spt, x_qry, y_qry in db_test:
+
+                    # because DataLoader loading data in batch
+                    #   and batchsize is 1, so squeeze
                     x_spt, y_spt, x_qry, y_qry = x_spt.squeeze(0).to(device), y_spt.squeeze(0).to(device), \
                                                  x_qry.squeeze(0).to(device), y_qry.squeeze(0).to(device)
 
