@@ -81,9 +81,9 @@ class MiniImagenet(Dataset):
         #   n01532829000000005.jpg  , n01532829
         #   n01532829000000006.jpg  , n01532829
         # csvdata is dictionary , key is label, value is all the filename
-        print(highlight('Load CSV file : ' + os.path.join(root, mode + '.csv'), 'green' ))
+        print(highlight('\tLoad CSV file : ' + os.path.join(root, mode + '.csv'), 'green' ))
         csvdata = self.loadCSV(os.path.join(root, mode + '.csv'))  # csv path
-        print('\t',type(csvdata), len(csvdata.keys()), end='\n\n')
+        #print('\t',type(csvdata), len(csvdata.keys()), end='\n\n')
 
         # all img names
         # [

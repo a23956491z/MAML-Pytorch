@@ -1,3 +1,5 @@
+
+
 import  torch
 from    torch import nn
 from    torch.nn import functional as F
@@ -12,6 +14,7 @@ class Learner(nn.Module):
 
     def __init__(self, config, imgc, imgsz):
         """
+        building parameters of neural network
 
         :param config: network config file, type:list of (string, list)
         :param imgc: 1 or 3
@@ -27,15 +30,31 @@ class Learner(nn.Module):
         # running_mean and running_var
         self.vars_bn = nn.ParameterList()
 
+
         for i, (name, param) in enumerate(self.config):
+
+            # import pdb
+            # pdb.set_trace()
+
             if name is 'conv2d':
+
                 # [ch_out, ch_in, kernelsz, kernelsz]
+                # only take first 4 parameters
                 w = nn.Parameter(torch.ones(*param[:4]))
+
                 # gain=1 according to cbfin's implementation
                 torch.nn.init.kaiming_normal_(w)
+
                 self.vars.append(w)
-                # [ch_out]
+
+                # bias, size : [ch_out]
                 self.vars.append(nn.Parameter(torch.zeros(param[0])))
+
+                # self.vars = ParameterList(
+                #     (0): Parameter containing: [torch.FloatTensor of size 32x3x3x3]
+                #     (1): Parameter containing: [torch.FloatTensor of size 32]
+                # )
+
 
             elif name is 'convt2d':
                 # [ch_in, ch_out, kernelsz, kernelsz, stride, padding]
@@ -43,6 +62,7 @@ class Learner(nn.Module):
                 # gain=1 according to cbfin's implementation
                 torch.nn.init.kaiming_normal_(w)
                 self.vars.append(w)
+
                 # [ch_in, ch_out]
                 self.vars.append(nn.Parameter(torch.zeros(param[1])))
 
@@ -52,13 +72,16 @@ class Learner(nn.Module):
                 # gain=1 according to cbfinn's implementation
                 torch.nn.init.kaiming_normal_(w)
                 self.vars.append(w)
-                # [ch_out]
+
+
+                # bias , size : [ch_out]
                 self.vars.append(nn.Parameter(torch.zeros(param[0])))
 
             elif name is 'bn':
                 # [ch_out]
                 w = nn.Parameter(torch.ones(param[0]))
                 self.vars.append(w)
+
                 # [ch_out]
                 self.vars.append(nn.Parameter(torch.zeros(param[0])))
 
@@ -66,6 +89,11 @@ class Learner(nn.Module):
                 running_mean = nn.Parameter(torch.zeros(param[0]), requires_grad=False)
                 running_var = nn.Parameter(torch.ones(param[0]), requires_grad=False)
                 self.vars_bn.extend([running_mean, running_var])
+
+                # self.vars.append(
+                #     (2): Parameter containing: [torch.FloatTensor of size 32]
+                #     (3): Parameter containing: [torch.FloatTensor of size 32]
+                # )
 
 
             elif name in ['tanh', 'relu', 'upsample', 'avg_pool2d', 'max_pool2d',
@@ -75,11 +103,11 @@ class Learner(nn.Module):
                 raise NotImplementedError
 
 
-
-
-
-
     def extra_repr(self):
+        """
+        extra representation defined in nn.Module
+            print customized extra information
+        """
         info = ''
 
         for name, param in self.config:
@@ -124,6 +152,7 @@ class Learner(nn.Module):
         running_mean/running_var. Thought weights/bias of bn is updated, it has been separated by fast_weights.
         Indeed, to not update running_mean/running_var, we need set update_bn_statistics=False
         but weight/bias will be updated and not dirty initial theta parameters via fast_weiths.
+
         :param x: [b, 1, 28, 28]
         :param vars:
         :param bn_training: set False to not update
@@ -143,17 +172,20 @@ class Learner(nn.Module):
                 x = F.conv2d(x, w, b, stride=param[4], padding=param[5])
                 idx += 2
                 # print(name, param, '\tout:', x.shape)
+
             elif name is 'convt2d':
                 w, b = vars[idx], vars[idx + 1]
                 # remember to keep synchrozied of forward_encoder and forward_decoder!
                 x = F.conv_transpose2d(x, w, b, stride=param[4], padding=param[5])
                 idx += 2
                 # print(name, param, '\tout:', x.shape)
+
             elif name is 'linear':
                 w, b = vars[idx], vars[idx + 1]
                 x = F.linear(x, w, b)
                 idx += 2
                 # print('forward:', idx, x.norm().item())
+
             elif name is 'bn':
                 w, b = vars[idx], vars[idx + 1]
                 running_mean, running_var = self.vars_bn[bn_idx], self.vars_bn[bn_idx+1]
