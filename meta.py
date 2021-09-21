@@ -1,3 +1,5 @@
+import pdb
+
 import  torch
 from    torch import nn
 from    torch import optim
@@ -8,6 +10,8 @@ import  numpy as np
 
 from    learner import Learner
 from    copy import deepcopy
+
+from utils.print import highlight
 
 
 
@@ -64,15 +68,22 @@ class Meta(nn.Module):
 
     def forward(self, x_spt, y_spt, x_qry, y_qry):
         """
-
         :param x_spt:   [b, setsz, c_, h, w]
         :param y_spt:   [b, setsz]
         :param x_qry:   [b, querysz, c_, h, w]
         :param y_qry:   [b, querysz]
         :return:
         """
+
+        # task_num : meta batch size
         task_num, setsz, c_, h, w = x_spt.size()
+        print()
+        print(highlight('task_num :','blue'), task_num)
+        print(highlight('set size :', 'blue'), setsz)
+
+        # querysz = k_qry * n_way
         querysz = x_qry.size(1)
+        print(highlight('query size  :', 'blue'), querysz)
 
         losses_q = [0 for _ in range(self.update_step + 1)]  # losses_q[i] is the loss on step i
         corrects = [0 for _ in range(self.update_step + 1)]
@@ -80,10 +91,14 @@ class Meta(nn.Module):
 
         for i in range(task_num):
 
-            # 1. run the i-th task and compute loss for k=0
+            # 1. run the i-th task and compute loss(training loss) for k=0
             logits = self.net(x_spt[i], vars=None, bn_training=True)
             loss = F.cross_entropy(logits, y_spt[i])
+
+            #   Compute & return sum of gradients
             grad = torch.autograd.grad(loss, self.net.parameters())
+
+            #   new weight
             fast_weights = list(map(lambda p: p[1] - self.update_lr * p[0], zip(grad, self.net.parameters())))
 
             # this is the loss and accuracy before first update
@@ -94,6 +109,8 @@ class Meta(nn.Module):
                 losses_q[0] += loss_q
 
                 pred_q = F.softmax(logits_q, dim=1).argmax(dim=1)
+
+                # how many preds are correct
                 correct = torch.eq(pred_q, y_qry[i]).sum().item()
                 corrects[0] = corrects[0] + correct
 
@@ -105,6 +122,8 @@ class Meta(nn.Module):
                 losses_q[1] += loss_q
                 # [setsz]
                 pred_q = F.softmax(logits_q, dim=1).argmax(dim=1)
+
+                # how many preds are correct
                 correct = torch.eq(pred_q, y_qry[i]).sum().item()
                 corrects[1] = corrects[1] + correct
 

@@ -112,6 +112,7 @@ def main(args):
                     x_spt, y_spt, x_qry, y_qry = x_spt.squeeze(0).to(device), y_spt.squeeze(0).to(device), \
                                                  x_qry.squeeze(0).to(device), y_qry.squeeze(0).to(device)
 
+                    # get accs
                     accs = maml.finetunning(x_spt, y_spt, x_qry, y_qry)
                     accs_all_test.append(accs)
 
